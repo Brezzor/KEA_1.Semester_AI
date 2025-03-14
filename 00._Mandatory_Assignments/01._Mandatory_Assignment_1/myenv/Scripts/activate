@@ -38,7 +38,7 @@ deactivate () {
 # unset irrelevant variables
 deactivate nondestructive
 
-VIRTUAL_ENV="C:\Users\olive\Desktop\KEA\KEA_1.Semester_AI\KEA_1.Semester_AI\00._Mandatory_Assignments\01._Mandatory_Assignment_1\myenv"
+VIRTUAL_ENV="C:\Users\olive\source\repos\KEA_1.Semester_AI\00._Mandatory_Assignments\01._Mandatory_Assignment_1\myenv"
 export VIRTUAL_ENV
 
 _OLD_VIRTUAL_PATH="$PATH"
