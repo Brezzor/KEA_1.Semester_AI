@@ -1,6 +1,6 @@
 import marimo
 
-__generated_with = "0.11.19"
+__generated_with = "0.11.22"
 app = marimo.App(width="medium")
 
 
@@ -30,6 +30,13 @@ def _(pd):
     cars = pd.read_csv("./cars.csv")
     cars.head()
     return (cars,)
+
+
+@app.cell
+def _():
+    import tensorflow as tf
+    print("Num GPUs Available: ", len(tf.config.list_physical_devices('GPU')))
+    return (tf,)
 
 
 if __name__ == "__main__":
