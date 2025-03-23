@@ -1,6 +1,6 @@
 import marimo
 
-__generated_with = "0.11.25"
+__generated_with = "0.11.22"
 app = marimo.App(width="medium")
 
 
@@ -12,7 +12,7 @@ def _():
 
 @app.cell(hide_code=True)
 def _(mo):
-    mo.md(r"""# Mandatory Assignment #1""")
+    mo.md(r"""# Mandatory Assignment #1 Logistic Regression""")
     return
 
 
@@ -30,7 +30,7 @@ def _(mo):
 
         ***2. using the dataset found in the file, complete the tasks below***
 
-        ***3. formulate a regression problem***
+        <s>***3. formulate a regression problem***</s>
 
         ***4. formulate a logistic regression problem***
 
@@ -65,10 +65,13 @@ def _(mo):
     return
 
 
-@app.cell
-def _(pd):
-    raw_cars_dataset = pd.read_csv("./cars.csv", na_values='?')
-    return (raw_cars_dataset,)
+app._unparsable_cell(
+    r"""
+
+    raw_cars_dataset = pd.read_csv(\"./cars.csv\", names= na_values='?')
+    """,
+    name="_"
+)
 
 
 @app.cell(hide_code=True)
@@ -91,19 +94,13 @@ def _(mo):
 
 @app.cell(hide_code=True)
 def _(mo):
-    mo.md(r"""### - Formulate a logistic regression (Classification model) problem""")
-    return
-
-
-@app.cell(hide_code=True)
-def _(mo):
-    mo.md(r"""***Using Displacement, Cylinders and Horsepower. Can we predict the manufacturer of the car?***""")
-    return
-
-
-@app.cell(hide_code=True)
-def _(mo):
     mo.md(r"""### - Design and train a model for each of the regression and logistic regression problems""")
+    return
+
+
+@app.cell
+def _(raw_cars_dataset):
+    raw_cars_dataset.isna().sum()
     return
 
 
@@ -130,12 +127,11 @@ def _(cars_dataset_1, pd):
 
 
 @app.cell
-def _(cars_dataset_2):
-    cars_dataset_3 = cars_dataset_2.drop(columns=['car name'])
+def _(cars_dataset_3):
     cars_train_dataset = cars_dataset_3.sample(frac=0.8, random_state=0)
     cars_test_dataset = cars_dataset_3.drop(cars_train_dataset.index)
     cars_train_dataset.tail(), cars_test_dataset.tail()
-    return cars_dataset_3, cars_test_dataset, cars_train_dataset
+    return cars_test_dataset, cars_train_dataset
 
 
 @app.cell
