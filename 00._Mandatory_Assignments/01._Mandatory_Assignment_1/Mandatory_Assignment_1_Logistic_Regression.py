@@ -1,6 +1,6 @@
 import marimo
 
-__generated_with = "0.11.22"
+__generated_with = "0.11.25"
 app = marimo.App(width="medium")
 
 
@@ -12,7 +12,7 @@ def _():
 
 @app.cell(hide_code=True)
 def _(mo):
-    mo.md(r"""# Mandatory Assignment #1 Logistic Regression""")
+    mo.md(r"""# Mandatory Assignment #1 Regression""")
     return
 
 
@@ -61,17 +61,28 @@ def _():
 
 @app.cell(hide_code=True)
 def _(mo):
-    mo.md(r"""Import 'cars.csv'""")
+    mo.md(r"""Import 'cars.csv', select the appropriate columns and make sure to tranform the '?' value to a NaN value.""")
     return
 
 
-app._unparsable_cell(
-    r"""
+@app.cell
+def _(pd):
+    column_names = ['mpg', 'cylinders', 'displacement', 'horsepower', 'weight', 'acceleration', 'model year', 'origin']
+    raw_cars_df = pd.read_csv("./cars.csv", usecols=column_names, na_values='?')
+    raw_cars_df
+    return column_names, raw_cars_df
 
-    raw_cars_dataset = pd.read_csv(\"./cars.csv\", names= na_values='?')
-    """,
-    name="_"
-)
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""Check for the number of NaN values and which column has missing values.""")
+    return
+
+
+@app.cell
+def _(raw_cars_df):
+    raw_cars_df.isna().sum()
+    return
 
 
 @app.cell(hide_code=True)
@@ -82,78 +93,230 @@ def _(mo):
 
 @app.cell(hide_code=True)
 def _(mo):
-    mo.md(r"""### - Formulate a regression (Regression model) problem""")
+    mo.md(r"""### - Formulate a logistic regression problem (Classification model)""")
     return
 
 
 @app.cell(hide_code=True)
 def _(mo):
-    mo.md(r"""***Using Displacement and Cylinders. Can we predict the cars Horsepower?***""")
+    mo.md(r"""***Using Horsepower, Displacement and Cylinders. Can we predict the cars Origin?***""")
     return
 
 
 @app.cell(hide_code=True)
 def _(mo):
-    mo.md(r"""### - Design and train a model for each of the regression and logistic regression problems""")
+    mo.md(r"""### - Design and train a model for the logistic regression problem""")
+    return
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""Make a copy of the raw dataset. Impute and tranform the the copied dataset so the missing values, gets assigned an appropriate value.""")
     return
 
 
 @app.cell
-def _(raw_cars_dataset):
-    raw_cars_dataset.isna().sum()
+def _(column_names, raw_cars_df):
+    from sklearn.impute import KNNImputer
+
+    cars_df_1 = raw_cars_df.copy()
+
+    imputer = KNNImputer(n_neighbors=1)
+
+    imputer.fit(cars_df_1[column_names])
+    return KNNImputer, cars_df_1, imputer
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""Transform dataset to fix missing values.""")
     return
 
 
 @app.cell
-def _(raw_cars_dataset):
-    cars_dataset_1 = raw_cars_dataset.copy()
-    cars_dataset_1 = cars_dataset_1.dropna()
-    return (cars_dataset_1,)
+def _(cars_df_1, column_names, imputer):
+    cars_df_1[column_names] = imputer.transform(cars_df_1[column_names])
+    cars_df_1
+    return
 
 
-@app.cell
-def _(cars_dataset_1):
-    cars_dataset_1.info()
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""Check for missing values again, to see if the missing values has been fixed.""")
     return
 
 
 @app.cell
-def _(cars_dataset_1, pd):
-    cars_dataset_2 = cars_dataset_1.copy()
-    cars_dataset_2['origin'] = cars_dataset_2['origin'].map({1: 'USA', 2: 'Europe', 3: 'Japan'})
-    cars_dataset_2 = pd.get_dummies(cars_dataset_2, columns=['origin'], prefix='', prefix_sep='')
-    cars_dataset_2.tail()
-    return (cars_dataset_2,)
+def _(cars_df_1):
+    cars_df_1.isna().sum()
+    return
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""To prepare the 'origin' for One Hot Encoding. We map the 'origin' to their appropriate country.""")
+    return
 
 
 @app.cell
-def _(cars_dataset_3):
-    cars_train_dataset = cars_dataset_3.sample(frac=0.8, random_state=0)
-    cars_test_dataset = cars_dataset_3.drop(cars_train_dataset.index)
-    cars_train_dataset.tail(), cars_test_dataset.tail()
-    return cars_test_dataset, cars_train_dataset
+def _(cars_df_1):
+    origin_mapping = {1: 'USA', 2: 'Japan', 3: 'Europe'}
+    cars_df_mapped = cars_df_1.copy()
+    cars_df_mapped['origin'] = cars_df_1['origin'].map(origin_mapping)
+    cars_df_mapped.tail()
+    return cars_df_mapped, origin_mapping
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""Here we fit the 'origin' column, to the One Hot Encoder.""")
+    return
 
 
 @app.cell
-def _(cars_train_dataset):
+def _(cars_df_mapped):
+    from sklearn.preprocessing import OneHotEncoder
+    encoder = OneHotEncoder()
+    encoder.fit(cars_df_mapped[['origin']])
+    return OneHotEncoder, encoder
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""Here we transform the 'origin' using the encoder and get a matrix.""")
+    return
+
+
+@app.cell
+def _(cars_df_mapped, encoder):
+    origin_encoded = encoder.transform(cars_df_mapped[['origin']])
+    origin_encoded
+    return (origin_encoded,)
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""Visualization of the matrix as an array.""")
+    return
+
+
+@app.cell
+def _(origin_encoded):
+    origin_encoded_array = origin_encoded.toarray()
+    origin_encoded_array[:8]
+    return (origin_encoded_array,)
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""Check that the encoder has the correct categories.""")
+    return
+
+
+@app.cell
+def _(encoder):
+    encoder.categories_
+    return
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""Here we make the encoded array into a DataFrame with the appropriate column names.""")
+    return
+
+
+@app.cell
+def _(origin_encoded_array, pd):
+    encoded_df = pd.DataFrame(origin_encoded_array, columns=['usa', 'japan', 'europe'])
+    encoded_df.tail()
+    return (encoded_df,)
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md("""Here we drop the 'origin' column and and the new values to the DataFrame.""")
+    return
+
+
+@app.cell
+def _(cars_df_mapped, encoded_df, pd):
+    cars_df_copy = cars_df_mapped.drop(columns=['origin']).reset_index(drop=True)
+    cars_df_2 = pd.concat([cars_df_copy, encoded_df], axis=1)
+    cars_df_2.tail()
+    return cars_df_2, cars_df_copy
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""Check correlation for the DataFrame.""")
+    return
+
+
+@app.cell
+def _(cars_df_2):
+    cars_df_2.corr()
+    return
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""Make the training and testing DataFrame.""")
+    return
+
+
+@app.cell
+def _(cars_df_2):
+    cars_train_df = cars_df_2.sample(frac=0.8, random_state=0)
+    cars_test_df = cars_df_2.drop(cars_train_df.index)
+    cars_train_df, cars_test_df
+    return cars_test_df, cars_train_df
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md("""Make a Scatterplot to check for correlation in the training DataFrame.""")
+    return
+
+
+@app.cell
+def _(cars_train_df):
     import seaborn as sns
-    sns.pairplot(cars_train_dataset[['mpg', 'cylinders', 'displacement', 'weight']], diag_kind='kde')
+    sns.pairplot(cars_train_df[['mpg', 'cylinders', 'displacement', 'weight', 'horsepower']], diag_kind='kde')
     return (sns,)
 
 
-@app.cell
-def _(cars_train_dataset):
-    cars_train_dataset.describe().transpose()
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""Check for the value distribution in the DataFrame.""")
     return
 
 
 @app.cell
-def _(cars_test_dataset, cars_train_dataset):
-    cars_train_features = cars_train_dataset.copy()
-    cars_test_features = cars_test_dataset.copy()
+def _(cars_train_df):
+    cars_train_df.describe().transpose()
+    return
 
-    cars_train_labels = cars_train_features.pop('mpg')
-    cars_test_labels = cars_test_features.pop('mpg')
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""Make the features DataFrame, with the values we can test with, and the labels Series, with the values we want to predict for.""")
+    return
+
+
+@app.cell
+def _(cars_test_df, cars_train_df, pd):
+    cars_train_features = cars_train_df.copy()
+    cars_test_features = cars_test_df.copy()
+
+    cars_train_labels = pd.DataFrame(cars_train_features.pop('usa'))
+    cars_train_labels['japan'] = (cars_train_features.pop('japan'))
+    cars_train_labels['europe'] = (cars_train_features.pop('europe'))
+
+    cars_test_labels = pd.DataFrame(cars_test_features.pop('usa'))
+    cars_test_labels['japan'] = (cars_test_features.pop('japan'))
+    cars_test_labels['europe'] = (cars_test_features.pop('europe'))
+
+    cars_train_features, cars_test_features, cars_train_labels, cars_test_labels
     return (
         cars_test_features,
         cars_test_labels,
@@ -162,352 +325,347 @@ def _(cars_test_dataset, cars_train_dataset):
     )
 
 
-@app.cell
-def _(cars_train_dataset):
-    cars_train_dataset.describe().transpose()[['mean', 'std']]
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""Check to see the DataFrame Standard Deviation.""")
     return
 
 
 @app.cell
-def _():
+def _(cars_train_df):
+    cars_train_df.describe().transpose()[['mean', 'std']]
+    return
+
+
+@app.cell
+def _(cars_train_features, np):
     import tensorflow as tf
-    normalizer = tf.keras.layers.Normalization(axis=-1)
-    return normalizer, tf
+
+    hors_dis_cyl_array = np.array(cars_train_features[['horsepower','displacement','cylinders']])
+
+    hors_dis_cyl_array[:5]
+    return hors_dis_cyl_array, tf
 
 
 @app.cell
-def _(cars_train_features, normalizer, np):
-    normalizer.adapt(np.array(cars_train_features))
-    normalizer.mean.numpy()
-    return
+def _(hors_dis_cyl_array, tf):
+    hors_dis_cyl_normalizer = tf.keras.layers.Normalization(axis=None)
+
+    hors_dis_cyl_normalizer.adapt(hors_dis_cyl_array)
+    return (hors_dis_cyl_normalizer,)
 
 
 @app.cell
-def _(cars_train_features, normalizer, np):
-    first = np.array(cars_train_features[:1], dtype=np.float32)
-
-    with np.printoptions(precision=2, suppress=True):
-      print('First example:', first)
-      print()
-      print('Normalized:', normalizer(first).numpy())
-    return (first,)
-
-
-@app.cell
-def _(cars_train_features, np, tf):
-    horsepower = np.array(cars_train_features['horsepower'])
-
-    horsepower_normalizer = tf.keras.layers.Normalization(input_shape=[1,], axis=None)
-
-    horsepower_normalizer.adapt(horsepower)
-    return horsepower, horsepower_normalizer
-
-
-@app.cell
-def _(horsepower_normalizer, tf):
-    horsepower_model = tf.keras.Sequential([
-        horsepower_normalizer,
-        tf.keras.layers.Dense(units=1)
+def _(hors_dis_cyl_normalizer, tf):
+    model_1 = tf.keras.Sequential([
+        hors_dis_cyl_normalizer,
+        tf.keras.layers.Dense(8, activation='sigmoid'),
+        tf.keras.layers.Dense(3)
     ])
 
-    horsepower_model.summary()
-    return (horsepower_model,)
+    model_1_optimizer = tf.keras.optimizers.SGD(learning_rate=0.01)
+
+    model_1.compile(
+        optimizer=model_1_optimizer, 
+        loss='binary_crossentropy',
+        metrics=[tf.keras.metrics.BinaryAccuracy()]
+    )
+
+    model_1.summary()
+    return model_1, model_1_optimizer
 
 
 @app.cell
-def _(horsepower, horsepower_model):
-    horsepower_model.predict(horsepower[:10])
-    return
+def _(cars_train_features, cars_train_labels, model_1):
+    from utils import Timer
+
+    with Timer():
+        model_1_history_1 = model_1.fit(
+            cars_train_features[['horsepower','displacement','cylinders']],
+            cars_train_labels,
+            epochs=100,
+            verbose=0,
+            validation_split=0.2
+        )
+    return Timer, model_1_history_1
 
 
 @app.cell
-def _(horsepower_model, tf):
-    horsepower_model.compile(
-        optimizer=tf.keras.optimizers.Adam(learning_rate=0.1),
-        loss='mean_absolute_error')
-    return
-
-
-@app.cell
-def _(cars_train_features, cars_train_labels, horsepower_model):
-    import utils
-
-    with utils.Timer():
-        history_1 = horsepower_model.fit(
-        cars_train_features['horsepower'],
-        cars_train_labels,
-        epochs=100,
-        verbose=0,
-        validation_split = 0.2)
-    return history_1, utils
-
-
-@app.cell
-def _(history_1, pd):
-    hist_1 = pd.DataFrame(history_1.history)
-    hist_1['epoch'] = history_1.epoch
-    hist_1.tail()
-    return (hist_1,)
-
-
-@app.cell
-def _(history_1):
+def _(model_1_history_1):
     import matplotlib.pyplot as plt
 
     def plot_loss(hist):
-        plt.plot(hist.history['loss'], label='loss')
-        plt.plot(hist.history['val_loss'], label='val_loss')
-        plt.ylim([0, 10])
+        plt.plot(hist.history['val_binary_accuracy'], label='val_binary_accuracy')
+        plt.plot(hist.history['binary_accuracy'], label='binary_accuracy')
         plt.xlabel('Epoch')
-        plt.ylabel('Error [MPG]')
+        plt.ylabel('Error [origin]')
         plt.legend()
         plt.grid(True)
         plt.show()
 
-    plot_loss(history_1)
+    plot_loss(model_1_history_1)
     return plot_loss, plt
 
 
 @app.cell
-def _(cars_test_features, cars_test_labels, horsepower_model):
+def _(model_1_history_1, pd):
+    from tensorflow.keras.callbacks import History
+
+    def show_history(hist: History):
+        hist_df = pd.DataFrame(hist.history)
+        hist_df['epoch'] = hist.epoch    
+        return hist_df.tail()
+
+    show_history(model_1_history_1)
+    return History, show_history
+
+
+@app.cell
+def _(cars_test_features, cars_test_labels, model_1):
     test_results = {}
 
-    test_results['horsepower_model'] = horsepower_model.evaluate(
-        cars_test_features['horsepower'],
+    test_results['model_1'] = model_1.evaluate(
+        cars_test_features[['horsepower','displacement','cylinders']],
         cars_test_labels, verbose=0)
     return (test_results,)
 
 
 @app.cell
-def _(horsepower_model, tf):
-    def horsepower_model_predict():
-        x = tf.linspace(0.0, 250, 251)
-        y = horsepower_model.predict(x)
-        return x, y
-
-    hp_1_x, hp_1_y = horsepower_model_predict()
-    return horsepower_model_predict, hp_1_x, hp_1_y
-
-
-@app.cell
-def _(cars_train_features, cars_train_labels, hp_1_x, hp_1_y, plt):
-    def plot_horsepower(x, y):
-        plt.scatter(cars_train_features['horsepower'], cars_train_labels, label='Data')
-        plt.plot(x, y, color='k', label='Predictions')
-        plt.xlabel('Horsepower')
-        plt.ylabel('MPG')
-        plt.legend()
-        plt.show()
-
-    plot_horsepower(hp_1_x, hp_1_y)
-    return (plot_horsepower,)
-
-
-@app.cell
-def _(normalizer, tf):
-    linear_model = tf.keras.Sequential([
-        normalizer,
-        tf.keras.layers.Dense(units=1)
+def _(hors_dis_cyl_normalizer, tf):
+    model_2 = tf.keras.Sequential([
+        hors_dis_cyl_normalizer,
+        tf.keras.layers.Dense(8, activation='sigmoid'),
+        tf.keras.layers.Dense(3)
     ])
-    return (linear_model,)
+
+    model_2_optimizer = tf.keras.optimizers.SGD(learning_rate=0.01)
+
+    model_2.compile(
+        optimizer=model_2_optimizer, 
+        loss='binary_crossentropy', 
+        metrics=[tf.keras.metrics.BinaryAccuracy()]
+    )
+
+    model_2.summary()
+    return model_2, model_2_optimizer
 
 
 @app.cell
-def _(cars_train_features, linear_model):
-    linear_model.predict(cars_train_features[:10])
+def _(Timer, cars_train_features, cars_train_labels, model_2):
+    with Timer():
+        model_2_history_1 = model_2.fit(
+            cars_train_features[['horsepower','displacement','cylinders']],
+            cars_train_labels,
+            epochs=300,
+            verbose=0,
+            validation_split=0.2
+        )
+    return (model_2_history_1,)
+
+
+@app.cell
+def _(model_2_history_1, plot_loss):
+    plot_loss(model_2_history_1)
     return
 
 
 @app.cell
-def _(linear_model):
-    linear_model.layers[1].kernel
+def _(model_2_history_1, show_history):
+    show_history(model_2_history_1)
     return
 
 
 @app.cell
-def _(linear_model, tf):
-    linear_model.compile(
-        optimizer=tf.keras.optimizers.Adam(learning_rate=0.1),
-        loss='mean_absolute_error')
+def _(cars_test_features, cars_test_labels, model_2, test_results):
+    test_results['model_2'] = model_2.evaluate(
+        cars_test_features[['horsepower','displacement','cylinders']],
+        cars_test_labels, verbose=0)
     return
 
 
 @app.cell
-def _(cars_train_features, cars_train_labels, linear_model, utils):
-    with utils.Timer():
-        history_2 = linear_model.fit(
+def _(hors_dis_cyl_normalizer, tf):
+    model_3 = tf.keras.Sequential([
+        hors_dis_cyl_normalizer,
+        tf.keras.layers.Dense(64, activation='sigmoid'),
+        tf.keras.layers.Dense(64, activation='sigmoid'),
+        tf.keras.layers.Dense(3)
+    ])
+
+    model_3_optimizer = tf.keras.optimizers.SGD(learning_rate=0.01)
+
+    model_3.compile(
+        optimizer=model_3_optimizer, 
+        loss='binary_crossentropy', 
+        metrics=[tf.keras.metrics.BinaryAccuracy()]
+    )
+
+    model_3.summary()
+    return model_3, model_3_optimizer
+
+
+@app.cell
+def _(Timer, cars_train_features, cars_train_labels, model_3):
+    with Timer():
+        model_3_history_1 = model_3.fit(
+            cars_train_features[['horsepower','displacement','cylinders']],
+            cars_train_labels,
+            epochs=100,
+            verbose=0,
+            validation_split=0.2
+        )
+    return (model_3_history_1,)
+
+
+@app.cell
+def _(model_3_history_1, plot_loss):
+    plot_loss(model_3_history_1)
+    return
+
+
+@app.cell
+def _(model_3_history_1, show_history):
+    show_history(model_3_history_1)
+    return
+
+
+@app.cell
+def _(cars_test_features, cars_test_labels, model_3, test_results):
+    test_results['model_3'] = model_3.evaluate(
+        cars_test_features[['horsepower','displacement','cylinders']],
+        cars_test_labels, verbose=0)
+    return
+
+
+@app.cell
+def _(cars_train_features, np, tf):
+    more_features_array = np.array(cars_train_features)
+
+    more_features_normalizer = tf.keras.layers.Normalization(axis=-1)
+
+    more_features_normalizer.adapt(more_features_array)
+    return more_features_array, more_features_normalizer
+
+
+@app.cell
+def _(more_features_normalizer, tf):
+    model_4 = tf.keras.Sequential([
+        more_features_normalizer,
+        tf.keras.layers.Dense(64, activation='sigmoid'),
+        tf.keras.layers.Dense(64, activation='sigmoid'),
+        tf.keras.layers.Dense(3)
+    ])
+
+    model_4_optimizer = tf.keras.optimizers.SGD(learning_rate=0.01)
+
+    model_4.compile(
+        optimizer=model_4_optimizer, 
+        loss='binary_crossentropy', 
+        metrics=[tf.keras.metrics.BinaryAccuracy()]
+    )
+
+    model_4.summary()
+    return model_4, model_4_optimizer
+
+
+@app.cell
+def _(Timer, cars_train_features, cars_train_labels, model_4):
+    with Timer():
+        model_4_history_1 = model_4.fit(
             cars_train_features,
             cars_train_labels,
             epochs=100,
             verbose=0,
-            validation_split = 0.2)
-    return (history_2,)
+            validation_split=0.2
+        )
+    return (model_4_history_1,)
 
 
 @app.cell
-def _(history_2, plot_loss):
-    plot_loss(history_2)
+def _(model_3_history_1, show_history):
+    show_history(model_3_history_1)
     return
 
 
 @app.cell
-def _(cars_test_features, cars_test_labels, linear_model, test_results):
-    test_results['linear_model'] = linear_model.evaluate(
-        cars_test_features, cars_test_labels, verbose=0)
+def _(model_4_history_1, plot_loss):
+    plot_loss(model_4_history_1)
     return
 
 
 @app.cell
-def _(tf):
-    def build_and_compile_model(norm):
-      model = tf.keras.Sequential([
-          norm,
-          tf.keras.layers.Dense(64, activation='relu'),
-          tf.keras.layers.Dense(64, activation='relu'),
-          tf.keras.layers.Dense(1)
-      ])
-
-      model.compile(loss='mean_absolute_error',
-                    optimizer=tf.keras.optimizers.Adam(0.001))
-      return model
-    return (build_and_compile_model,)
+def _(cars_test_features, cars_test_labels, model_4, test_results):
+    test_results['model_4'] = model_4.evaluate(
+        cars_test_features,
+        cars_test_labels, verbose=0)
+    return
 
 
 @app.cell
-def _(build_and_compile_model, horsepower_normalizer):
-    dnn_horsepower_model = build_and_compile_model(horsepower_normalizer)
-    return (dnn_horsepower_model,)
+def _(more_features_normalizer, tf):
+    model_5 = tf.keras.Sequential([
+        more_features_normalizer,
+        tf.keras.layers.Dense(128, activation='sigmoid'),
+        tf.keras.layers.Dense(128, activation='sigmoid'),
+        tf.keras.layers.Dense(3)
+    ])
+
+    model_5_optimizer = tf.keras.optimizers.SGD(learning_rate=0.01)
+
+    model_5.compile(
+        optimizer=model_5_optimizer, 
+        loss='binary_crossentropy', 
+        metrics=[tf.keras.metrics.BinaryAccuracy()]
+    )
+
+    model_5.summary()
+    return model_5, model_5_optimizer
 
 
 @app.cell
-def _(cars_train_features, cars_train_labels, dnn_horsepower_model, utils):
-    with utils.Timer():
-        history_3 = dnn_horsepower_model.fit(
-            cars_train_features['horsepower'],
+def _(Timer, cars_train_features, cars_train_labels, model_5):
+    with Timer():
+        model_5_history_1 = model_5.fit(
+            cars_train_features,
             cars_train_labels,
             epochs=100,
             verbose=0,
-            validation_split=0.2)
-    return (history_3,)
+            validation_split=0.2
+        )
+    return (model_5_history_1,)
 
 
 @app.cell
-def _(history_3, plot_loss):
-    plot_loss(history_3)
+def _(model_5_history_1, plot_loss):
+    plot_loss(model_5_history_1)
     return
 
 
 @app.cell
-def _(dnn_horsepower_model, tf):
-    def dnn_horsepower_model_predict():
-        x = tf.linspace(0.0, 250, 251)
-        y = dnn_horsepower_model.predict(x)
-        return x, y
-
-    dnn_1_x, dnn_1_y = dnn_horsepower_model_predict()
-    return dnn_1_x, dnn_1_y, dnn_horsepower_model_predict
-
-
-@app.cell
-def _(dnn_1_x, dnn_1_y, plot_horsepower):
-    plot_horsepower(dnn_1_x, dnn_1_y)
+def _(model_5_history_1, show_history):
+    show_history(model_5_history_1)
     return
 
 
 @app.cell
-def _(
-    cars_test_features,
-    cars_test_labels,
-    dnn_horsepower_model,
-    test_results,
-):
-    test_results['dnn_horsepower_model'] = dnn_horsepower_model.evaluate(
-        cars_test_features['horsepower'], cars_test_labels,
-        verbose=0)
+def _(cars_test_features, cars_test_labels, model_5, test_results):
+    test_results['model_5'] = model_5.evaluate(
+        cars_test_features,
+        cars_test_labels, verbose=0)
     return
 
 
 @app.cell
-def _(build_and_compile_model, normalizer):
-    dnn_model = build_and_compile_model(normalizer)
-    dnn_model.summary()
-    return (dnn_model,)
-
-
-@app.cell
-def _(cars_train_features, cars_train_labels, dnn_model, utils):
-    with utils.Timer():
-        history_4 = dnn_model.fit(
-            cars_train_features,
-            cars_train_labels,
-            validation_split=0.2,
-            verbose=0, epochs=100)
-    return (history_4,)
-
-
-@app.cell
-def _(history_4, plot_loss):
-    plot_loss(history_4)
-    return
-
-
-@app.cell
-def _(cars_test_features, cars_test_labels, dnn_model, test_results):
-    test_results['dnn_model'] = dnn_model.evaluate(cars_test_features, cars_test_labels, verbose=0)
+def _(test_results):
+    test_results
     return
 
 
 @app.cell
 def _(pd, test_results):
-    pd.DataFrame(test_results, index=['Mean absolute error [MPG]']).T
-    return
-
-
-@app.cell
-def _(cars_test_features, cars_test_labels, dnn_model, plt):
-    test_predictions = dnn_model.predict(cars_test_features).flatten()
-
-    a = plt.axes(aspect='equal')
-    plt.scatter(cars_test_labels, test_predictions)
-    plt.xlabel('True Values [MPG]')
-    plt.ylabel('Predictions [MPG]')
-    lims = [0, 50]
-    plt.xlim(lims)
-    plt.ylim(lims)
-    _ = plt.plot(lims, lims)
-    plt.show()
-    return a, lims, test_predictions
-
-
-@app.cell
-def _(cars_test_labels, plt, test_predictions):
-    error = test_predictions - cars_test_labels
-    plt.hist(error, bins=25)
-    plt.xlabel('Prediction Error [MPG]')
-    _ = plt.ylabel('Count')
-    plt.show()
-    return (error,)
-
-
-@app.cell
-def _(dnn_model):
-    dnn_model.save('dnn_model.keras')
-    return
-
-
-@app.cell
-def _(cars_test_features, cars_test_labels, test_results, tf):
-    reloaded = tf.keras.models.load_model('dnn_model.keras')
-
-    test_results['reloaded'] = reloaded.evaluate(
-        cars_test_features, cars_test_labels, verbose=0)
-    return (reloaded,)
-
-
-@app.cell
-def _(pd, test_results):
-    pd.DataFrame(test_results, index=['Mean absolute error [MPG]']).T
-    return
+    result = pd.DataFrame(test_results).transpose()
+    result
+    return (result,)
 
 
 if __name__ == "__main__":

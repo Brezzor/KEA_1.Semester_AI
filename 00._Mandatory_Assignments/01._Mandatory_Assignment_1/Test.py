@@ -93,7 +93,7 @@ def _(mo):
 
 @app.cell(hide_code=True)
 def _(mo):
-    mo.md(r"""### - Formulate a regression problem (Regression model)""")
+    mo.md(r"""### - Formulate a regression (Regression model) problem""")
     return
 
 
@@ -105,7 +105,7 @@ def _(mo):
 
 @app.cell(hide_code=True)
 def _(mo):
-    mo.md(r"""### - Design and train a model for the regression problem""")
+    mo.md(r"""### - Design and train a model for each of the regression and logistic regression problems""")
     return
 
 
@@ -285,7 +285,7 @@ def _(cars_train_df):
     return (sns,)
 
 
-@app.cell(hide_code=True)
+@app.cell
 def _(mo):
     mo.md(r"""Check for the value distribution in the DataFrame.""")
     return
@@ -294,12 +294,6 @@ def _(mo):
 @app.cell
 def _(cars_train_df):
     cars_train_df.describe().transpose()
-    return
-
-
-@app.cell(hide_code=True)
-def _(mo):
-    mo.md(r"""Make the features DataFrame, with the values we can test with, and the labels Series, with the values we want to predict for.""")
     return
 
 
@@ -318,12 +312,6 @@ def _(cars_test_df, cars_train_df):
     )
 
 
-@app.cell(hide_code=True)
-def _(mo):
-    mo.md(r"""Check to see the DataFrame Standard Deviation.""")
-    return
-
-
 @app.cell
 def _(cars_train_df):
     cars_train_df.describe().transpose()[['mean', 'std']]
@@ -331,345 +319,348 @@ def _(cars_train_df):
 
 
 @app.cell
-def _(cars_train_features, np):
+def _():
     import tensorflow as tf
+    normalizer = tf.keras.layers.Normalization(axis=-1)
+    return normalizer, tf
 
-    dis_cyl_array = np.array(cars_train_features[['displacement','cylinders']])
+
+@app.cell
+def _(cars_train_features, normalizer, np):
+    normalizer.adapt(np.array(cars_train_features))
+    normalizer.mean.numpy()
+    return
+
+
+@app.cell
+def _(cars_train_features, normalizer, np):
+    first = np.array(cars_train_features[:1], dtype=np.float32)
+
+    with np.printoptions(precision=2, suppress=True):
+      print('First example:', first)
+      print()
+      print('Normalized:', normalizer(first).numpy())
+    return (first,)
+
+
+@app.cell
+def _(cars_train_features, np, tf):
+    dis_cyl = np.array(cars_train_features[['displacement','cylinders']])
 
     dis_cyl_normalizer = tf.keras.layers.Normalization(input_shape=[2,], axis=None)
 
-    dis_cyl_normalizer.adapt(dis_cyl_array)
-    return dis_cyl_array, dis_cyl_normalizer, tf
+    dis_cyl_normalizer.adapt(dis_cyl)
+    return dis_cyl, dis_cyl_normalizer
 
 
 @app.cell
 def _(dis_cyl_normalizer, tf):
-    linear_model = tf.keras.Sequential([
+    horsepower_model = tf.keras.Sequential([
         dis_cyl_normalizer,
         tf.keras.layers.Dense(units=1)
     ])
 
-    linear_model_optimizer = tf.keras.optimizers.Adam(learning_rate=0.001)
-
-    linear_model.layers[1].kernel
-
-    linear_model.compile(optimizer=linear_model_optimizer, loss='mean_absolute_error')
-
-    linear_model.summary()
-    return linear_model, linear_model_optimizer
+    horsepower_model.summary()
+    return (horsepower_model,)
 
 
 @app.cell
-def _(cars_train_features, cars_train_labels, linear_model):
-    from utils import Timer
-
-    with Timer():
-        linear_model_history_1 = linear_model.fit(
-            cars_train_features[['displacement','cylinders']],
-            cars_train_labels,
-            epochs=100,
-            verbose=0,
-            validation_split=0.2
-        )
-    return Timer, linear_model_history_1
+def _(dis_cyl, horsepower_model):
+    horsepower_model.predict(dis_cyl[:10])
+    return
 
 
 @app.cell
-def _(linear_model_history_1):
+def _(horsepower_model, tf):
+    horsepower_model.compile(
+        optimizer=tf.keras.optimizers.Adam(learning_rate=0.001),
+        loss='mean_absolute_error')
+    return
+
+
+@app.cell
+def _(cars_train_features, cars_train_labels, horsepower_model):
+    import utils
+
+    with utils.Timer():
+        history_1 = horsepower_model.fit(
+        cars_train_features[['displacement','cylinders']],
+        cars_train_labels,
+        epochs=100,
+        verbose=0,
+        validation_split = 0.2)
+    return history_1, utils
+
+
+@app.cell
+def _(history_1, pd):
+    hist_1 = pd.DataFrame(history_1.history)
+    hist_1['epoch'] = history_1.epoch
+    hist_1.tail()
+    return (hist_1,)
+
+
+@app.cell
+def _(history_1):
     import matplotlib.pyplot as plt
 
-    def plot_loss(hist):    
+    def plot_loss(hist):
         plt.plot(hist.history['loss'], label='loss')
         plt.plot(hist.history['val_loss'], label='val_loss')
+        #plt.ylim([0, 100])
         plt.xlabel('Epoch')
         plt.ylabel('Error [Horsepower]')
         plt.legend()
         plt.grid(True)
         plt.show()
 
-    plot_loss(linear_model_history_1)
+    plot_loss(history_1)
     return plot_loss, plt
 
 
 @app.cell
-def _(linear_model_history_1, pd):
-    from tensorflow.keras.callbacks import History
-
-    def show_history(hist: History):
-        hist_df = pd.DataFrame(hist.history)
-        hist_df['epoch'] = hist.epoch    
-        return hist_df.tail()
-
-    show_history(linear_model_history_1)
-    return History, show_history
-
-
-@app.cell
-def _(cars_test_features, cars_test_labels, linear_model):
+def _(cars_test_features, cars_test_labels, horsepower_model):
     test_results = {}
 
-    test_results['linear_model'] = linear_model.evaluate(
+    test_results['horsepower_model'] = horsepower_model.evaluate(
         cars_test_features[['displacement','cylinders']],
         cars_test_labels, verbose=0)
     return (test_results,)
 
 
 @app.cell
-def _(dis_cyl_normalizer, tf):
-    model_1 = tf.keras.Sequential([
-        dis_cyl_normalizer,
-        tf.keras.layers.Dense(8, activation='relu'),
-        tf.keras.layers.Dense(1)
+def _(horsepower_model, tf):
+    def horsepower_model_predict():
+        x = tf.linspace((32,0), 250, 251)
+        y = horsepower_model.predict(x)
+        return x, y
+
+    hp_1_x, hp_1_y = horsepower_model_predict()
+    return horsepower_model_predict, hp_1_x, hp_1_y
+
+
+@app.cell
+def _(cars_train_features, cars_train_labels, hp_1_x, hp_1_y, plt):
+    def plot_displacement(x, y):
+        plt.scatter(cars_train_features['displacement'], cars_train_labels, label='Data')
+        plt.plot(x, y, color='k', label='Predictions')
+        plt.xlabel('Displacement')
+        plt.ylabel('Horsepower')
+        plt.legend()
+        plt.show()
+
+    def plot_cylinders(x, y):
+        plt.scatter(cars_train_features['cylinders'], cars_train_labels, label='Data')
+        plt.plot(x, y, color='k', label='Predictions')
+        plt.xlim(0,10)
+        plt.xlabel('Cylinders')
+        plt.ylabel('Horsepower')
+        plt.legend()
+        plt.show()
+
+    plot_displacement(hp_1_x, hp_1_y), plot_cylinders(hp_1_x, hp_1_y)
+    return plot_cylinders, plot_displacement
+
+
+@app.cell
+def _(normalizer, tf):
+    linear_model = tf.keras.Sequential([
+        normalizer,
+        tf.keras.layers.Dense(units=1)
     ])
-
-    model_1_optimizer = tf.keras.optimizers.Adam(learning_rate=0.001)
-
-    model_1.compile(optimizer=model_1_optimizer, loss='mean_absolute_error')
-
-    model_1.summary()
-    return model_1, model_1_optimizer
+    return (linear_model,)
 
 
 @app.cell
-def _(Timer, cars_train_features, cars_train_labels, model_1):
-    with Timer():
-        model_1_history_1 = model_1.fit(
-            cars_train_features[['displacement','cylinders']],
-            cars_train_labels,
-            epochs=100,
-            verbose=0,
-            validation_split=0.2
-        )
-    return (model_1_history_1,)
-
-
-@app.cell
-def _(model_1_history_1, plot_loss):
-    plot_loss(model_1_history_1)
+def _(cars_train_features, linear_model):
+    linear_model.predict(cars_train_features[:10])
     return
 
 
 @app.cell
-def _(model_1_history_1, show_history):
-    show_history(model_1_history_1)
+def _(linear_model):
+    linear_model.layers[1].kernel
     return
 
 
 @app.cell
-def _(cars_test_features, cars_test_labels, model_1, test_results):
-    test_results['model_1'] = model_1.evaluate(
-        cars_test_features[['displacement','cylinders']],
-        cars_test_labels, verbose=0)
+def _(linear_model, tf):
+    linear_model.compile(
+        optimizer=tf.keras.optimizers.Adam(learning_rate=0.001),
+        loss='mean_absolute_error')
     return
 
 
 @app.cell
-def _(dis_cyl_normalizer, tf):
-    model_2 = tf.keras.Sequential([
-        dis_cyl_normalizer,
-        tf.keras.layers.Dense(8, activation='relu'),
-        tf.keras.layers.Dense(1)
-    ])
-
-    model_2_optimizer = tf.keras.optimizers.Adam(learning_rate=0.001)
-
-    model_2.compile(optimizer=model_2_optimizer, loss='mean_absolute_error')
-
-    model_2.summary()
-    return model_2, model_2_optimizer
-
-
-@app.cell
-def _(Timer, cars_train_features, cars_train_labels, model_2):
-    with Timer():
-        model_2_history_1 = model_2.fit(
-            cars_train_features[['displacement','cylinders']],
-            cars_train_labels,
-            epochs=300,
-            verbose=0,
-            validation_split=0.2
-        )
-    return (model_2_history_1,)
-
-
-@app.cell
-def _(model_2_history_1, plot_loss):
-    plot_loss(model_2_history_1)
-    return
-
-
-@app.cell
-def _(model_2_history_1, show_history):
-    show_history(model_2_history_1)
-    return
-
-
-@app.cell
-def _(cars_test_features, cars_test_labels, model_2, test_results):
-    test_results['model_2'] = model_2.evaluate(
-        cars_test_features[['displacement','cylinders']],
-        cars_test_labels, verbose=0)
-    return
-
-
-@app.cell
-def _(dis_cyl_normalizer, tf):
-    model_3 = tf.keras.Sequential([
-        dis_cyl_normalizer,
-        tf.keras.layers.Dense(64, activation='relu'),
-        tf.keras.layers.Dense(64, activation='relu'),
-        tf.keras.layers.Dense(1)
-    ])
-
-    model_3_optimizer = tf.keras.optimizers.Adam(learning_rate=0.001)
-
-    model_3.compile(optimizer=model_3_optimizer, loss='mean_absolute_error')
-
-    model_3.summary()
-    return model_3, model_3_optimizer
-
-
-@app.cell
-def _(Timer, cars_train_features, cars_train_labels, model_3):
-    with Timer():
-        model_3_history_1 = model_3.fit(
-            cars_train_features[['displacement','cylinders']],
-            cars_train_labels,
-            epochs=100,
-            verbose=0,
-            validation_split=0.2
-        )
-    return (model_3_history_1,)
-
-
-@app.cell
-def _(model_3_history_1, plot_loss):
-    plot_loss(model_3_history_1)
-    return
-
-
-@app.cell
-def _(model_3_history_1, show_history):
-    show_history(model_3_history_1)
-    return
-
-
-@app.cell
-def _(cars_test_features, cars_test_labels, model_3, test_results):
-    test_results['model_3'] = model_3.evaluate(
-        cars_test_features[['displacement','cylinders']],
-        cars_test_labels, verbose=0)
-    return
-
-
-@app.cell
-def _(cars_train_features, np, tf):
-    more_features_array = np.array(cars_train_features)
-
-    more_features_normalizer = tf.keras.layers.Normalization(axis=-1)
-
-    more_features_normalizer.adapt(more_features_array)
-    return more_features_array, more_features_normalizer
-
-
-@app.cell
-def _(more_features_normalizer, tf):
-    model_4 = tf.keras.Sequential([
-        more_features_normalizer,
-        tf.keras.layers.Dense(64, activation='relu'),
-        tf.keras.layers.Dense(64, activation='relu'),
-        tf.keras.layers.Dense(1)
-    ])
-
-    model_4_optimizer = tf.keras.optimizers.Adam(learning_rate=0.001)
-
-    model_4.compile(optimizer=model_4_optimizer, loss='mean_absolute_error')
-
-    model_4.summary()
-    return model_4, model_4_optimizer
-
-
-@app.cell
-def _(Timer, cars_train_features, cars_train_labels, model_4):
-    with Timer():
-        model_4_history_1 = model_4.fit(
+def _(cars_train_features, cars_train_labels, linear_model, utils):
+    with utils.Timer():
+        history_2 = linear_model.fit(
             cars_train_features,
             cars_train_labels,
             epochs=100,
             verbose=0,
-            validation_split=0.2
-        )
-    return (model_4_history_1,)
+            validation_split = 0.2)
+    return (history_2,)
 
 
 @app.cell
-def _(model_3_history_1, show_history):
-    show_history(model_3_history_1)
+def _(history_2, plot_loss):
+    plot_loss(history_2)
     return
 
 
 @app.cell
-def _(model_4_history_1, plot_loss):
-    plot_loss(model_4_history_1)
+def _(cars_test_features, cars_test_labels, linear_model, test_results):
+    test_results['linear_model'] = linear_model.evaluate(
+        cars_test_features, cars_test_labels, verbose=0)
     return
 
 
 @app.cell
-def _(cars_test_features, cars_test_labels, model_4, test_results):
-    test_results['model_4'] = model_4.evaluate(
-        cars_test_features,
-        cars_test_labels, verbose=0)
-    return
+def _(tf):
+    def build_and_compile_model(norm):
+      model = tf.keras.Sequential([
+          norm,
+          tf.keras.layers.Dense(64, activation='relu'),
+          tf.keras.layers.Dense(64, activation='relu'),
+          tf.keras.layers.Dense(1)
+      ])
+
+      model.compile(loss='mean_absolute_error',
+                    optimizer=tf.keras.optimizers.Adam(0.01))
+      return model
+    return (build_and_compile_model,)
 
 
 @app.cell
-def _(more_features_normalizer, tf):
-    model_5 = tf.keras.Sequential([
-        more_features_normalizer,
-        tf.keras.layers.Dense(128, activation='relu'),
-        tf.keras.layers.Dense(128, activation='relu'),
-        tf.keras.layers.Dense(1)
-    ])
-
-    model_5_optimizer = tf.keras.optimizers.Adam(learning_rate=0.001)
-
-    model_5.compile(optimizer=model_5_optimizer, loss='mean_absolute_error')
-
-    model_5.summary()
-    return model_5, model_5_optimizer
+def _(build_and_compile_model, dis_cyl_normalizer):
+    dnn_horsepower_model = build_and_compile_model(dis_cyl_normalizer)
+    return (dnn_horsepower_model,)
 
 
 @app.cell
-def _(Timer, cars_train_features, cars_train_labels, model_5):
-    with Timer():
-        model_5_history_1 = model_5.fit(
-            cars_train_features,
+def _(cars_train_features, cars_train_labels, dnn_horsepower_model, utils):
+    with utils.Timer():
+        history_3 = dnn_horsepower_model.fit(
+            cars_train_features[['displacement','cylinders']],
             cars_train_labels,
             epochs=100,
             verbose=0,
-            validation_split=0.2
-        )
-    return (model_5_history_1,)
+            validation_split=0.2)
+    return (history_3,)
 
 
 @app.cell
-def _(model_5_history_1, plot_loss):
-    plot_loss(model_5_history_1)
+def _(history_3, plot_loss):
+    plot_loss(history_3)
     return
 
 
 @app.cell
-def _(model_5_history_1, show_history):
-    show_history(model_5_history_1)
+def _(dnn_horsepower_model, tf):
+    def dnn_horsepower_model_predict():
+        x = tf.linspace((32,0), 250, 251)
+        y = dnn_horsepower_model.predict(x)
+        return x, y
+
+    dnn_1_x, dnn_1_y = dnn_horsepower_model_predict()
+    return dnn_1_x, dnn_1_y, dnn_horsepower_model_predict
+
+
+@app.cell
+def _(dnn_1_x, dnn_1_y, plot_cylinders, plot_displacement):
+    plot_displacement(dnn_1_x, dnn_1_y), plot_cylinders(dnn_1_x, dnn_1_y)
     return
 
 
 @app.cell
-def _(cars_test_features, cars_test_labels, model_5, test_results):
-    test_results['model_5'] = model_5.evaluate(
-        cars_test_features,
-        cars_test_labels, verbose=0)
+def _(
+    cars_test_features,
+    cars_test_labels,
+    dnn_horsepower_model,
+    test_results,
+):
+    test_results['dnn_horsepower_model'] = dnn_horsepower_model.evaluate(
+        cars_test_features[['displacement','cylinders']], cars_test_labels,
+        verbose=0)
     return
+
+
+@app.cell
+def _(build_and_compile_model, normalizer):
+    dnn_model = build_and_compile_model(normalizer)
+    dnn_model.summary()
+    return (dnn_model,)
+
+
+@app.cell
+def _(cars_train_features, cars_train_labels, dnn_model, utils):
+    with utils.Timer():
+        history_4 = dnn_model.fit(
+            cars_train_features,
+            cars_train_labels,
+            validation_split=0.2,
+            verbose=0, epochs=100)
+    return (history_4,)
+
+
+@app.cell
+def _(history_4, plot_loss):
+    plot_loss(history_4)
+    return
+
+
+@app.cell
+def _(cars_test_features, cars_test_labels, dnn_model, test_results):
+    test_results['dnn_model'] = dnn_model.evaluate(cars_test_features, cars_test_labels, verbose=0)
+    return
+
+
+@app.cell
+def _(pd, test_results):
+    pd.DataFrame(test_results, index=['Mean absolute error [Horsepower]']).T
+    return
+
+
+@app.cell
+def _(cars_test_features, cars_test_labels, dnn_model, plt):
+    test_predictions = dnn_model.predict(cars_test_features).flatten()
+
+    a = plt.axes(aspect='equal')
+    plt.scatter(cars_test_labels, test_predictions)
+    plt.xlabel('True Values [Horsepower]')
+    plt.ylabel('Predictions [Horsepower]')
+    lims = [0, 50]
+    plt.xlim(lims)
+    plt.ylim(lims)
+    _ = plt.plot(lims, lims)
+    plt.show()
+    return a, lims, test_predictions
+
+
+@app.cell
+def _(cars_test_labels, plt, test_predictions):
+    error = test_predictions - cars_test_labels
+    plt.hist(error, bins=25)
+    plt.xlabel('Prediction Error [Horsepower]')
+    _ = plt.ylabel('Count')
+    plt.show()
+    return (error,)
+
+
+@app.cell
+def _(dnn_model):
+    dnn_model.save('dnn_model.keras')
+    return
+
+
+@app.cell
+def _(cars_test_features, cars_test_labels, test_results, tf):
+    reloaded = tf.keras.models.load_model('dnn_model.keras')
+
+    test_results['dnn_model_reloaded'] = reloaded.evaluate(
+        cars_test_features, cars_test_labels, verbose=0)
+    return (reloaded,)
 
 
 @app.cell
