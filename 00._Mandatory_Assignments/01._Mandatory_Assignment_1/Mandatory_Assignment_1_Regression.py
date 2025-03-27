@@ -353,7 +353,7 @@ def _(dis_cyl_normalizer, tf):
 
     linear_model.layers[1].kernel
 
-    linear_model.compile(optimizer=linear_model_optimizer, loss='mean_absolute_error')
+    linear_model.compile(optimizer=linear_model_optimizer, loss=tf.keras.losses.MeanAbsoluteError, metrics=[tf.keras.metrics.RootMeanSquaredError()])
 
     linear_model.summary()
     return linear_model, linear_model_optimizer
@@ -375,23 +375,6 @@ def _(cars_train_features, cars_train_labels, linear_model):
 
 
 @app.cell
-def _(linear_model_history_1):
-    import matplotlib.pyplot as plt
-
-    def plot_loss(hist):    
-        plt.plot(hist.history['loss'], label='loss')
-        plt.plot(hist.history['val_loss'], label='val_loss')
-        plt.xlabel('Epoch')
-        plt.ylabel('Error [Horsepower]')
-        plt.legend()
-        plt.grid(True)
-        plt.show()
-
-    plot_loss(linear_model_history_1)
-    return plot_loss, plt
-
-
-@app.cell
 def _(linear_model_history_1, pd):
     from tensorflow.keras.callbacks import History
 
@@ -402,6 +385,25 @@ def _(linear_model_history_1, pd):
 
     show_history(linear_model_history_1)
     return History, show_history
+
+
+@app.cell
+def _(History, linear_model_history_1):
+    import matplotlib.pyplot as plt
+
+    def plot_loss(hist: History):    
+        plt.plot(hist.history['loss'], label='loss')
+        plt.plot(hist.history['val_loss'], label='val_loss')
+        plt.plot(hist.history['root_mean_squared_error'], label='root_mean_squared_error')
+        plt.plot(hist.history['val_root_mean_squared_error'], label='val_root_mean_squared_error')
+        plt.xlabel('Epoch')
+        plt.ylabel('Error [Horsepower]')
+        plt.legend()
+        plt.grid(True)
+        plt.show()
+
+    plot_loss(linear_model_history_1)
+    return plot_loss, plt
 
 
 @app.cell
@@ -424,7 +426,7 @@ def _(dis_cyl_normalizer, tf):
 
     model_1_optimizer = tf.keras.optimizers.Adam(learning_rate=0.001)
 
-    model_1.compile(optimizer=model_1_optimizer, loss='mean_absolute_error')
+    model_1.compile(optimizer=model_1_optimizer, loss=tf.keras.losses.MeanAbsoluteError, metrics=[tf.keras.metrics.RootMeanSquaredError()])
 
     model_1.summary()
     return model_1, model_1_optimizer
@@ -473,7 +475,7 @@ def _(dis_cyl_normalizer, tf):
 
     model_2_optimizer = tf.keras.optimizers.Adam(learning_rate=0.001)
 
-    model_2.compile(optimizer=model_2_optimizer, loss='mean_absolute_error')
+    model_2.compile(optimizer=model_2_optimizer, loss=tf.keras.losses.MeanAbsoluteError, metrics=[tf.keras.metrics.RootMeanSquaredError()])
 
     model_2.summary()
     return model_2, model_2_optimizer
@@ -523,7 +525,7 @@ def _(dis_cyl_normalizer, tf):
 
     model_3_optimizer = tf.keras.optimizers.Adam(learning_rate=0.001)
 
-    model_3.compile(optimizer=model_3_optimizer, loss='mean_absolute_error')
+    model_3.compile(optimizer=model_3_optimizer, loss=tf.keras.losses.MeanAbsoluteError, metrics=[tf.keras.metrics.RootMeanSquaredError()])
 
     model_3.summary()
     return model_3, model_3_optimizer
@@ -583,7 +585,7 @@ def _(more_features_normalizer, tf):
 
     model_4_optimizer = tf.keras.optimizers.Adam(learning_rate=0.001)
 
-    model_4.compile(optimizer=model_4_optimizer, loss='mean_absolute_error')
+    model_4.compile(optimizer=model_4_optimizer, loss=tf.keras.losses.MeanAbsoluteError, metrics=[tf.keras.metrics.RootMeanSquaredError()])
 
     model_4.summary()
     return model_4, model_4_optimizer
@@ -633,7 +635,7 @@ def _(more_features_normalizer, tf):
 
     model_5_optimizer = tf.keras.optimizers.Adam(learning_rate=0.001)
 
-    model_5.compile(optimizer=model_5_optimizer, loss='mean_absolute_error')
+    model_5.compile(optimizer=model_5_optimizer, loss=tf.keras.losses.MeanAbsoluteError, metrics=[tf.keras.metrics.RootMeanSquaredError()])
 
     model_5.summary()
     return model_5, model_5_optimizer
@@ -674,7 +676,7 @@ def _(cars_test_features, cars_test_labels, model_5, test_results):
 
 @app.cell
 def _(pd, test_results):
-    pd.DataFrame(test_results, index=['Mean absolute error [Horsepower]']).T
+    pd.DataFrame(test_results, index=['Mean absolute error [Horsepower]', 'Root squared mean error [Horsepower]']).T
     return
 
 

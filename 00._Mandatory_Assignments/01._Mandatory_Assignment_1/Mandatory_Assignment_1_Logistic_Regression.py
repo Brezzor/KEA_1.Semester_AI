@@ -12,7 +12,7 @@ def _():
 
 @app.cell(hide_code=True)
 def _(mo):
-    mo.md(r"""# Mandatory Assignment #1 Regression""")
+    mo.md(r"""# Mandatory Assignment #1 Logistic Regression""")
     return
 
 
@@ -69,7 +69,7 @@ def _(mo):
 def _(pd):
     column_names = ['mpg', 'cylinders', 'displacement', 'horsepower', 'weight', 'acceleration', 'model year', 'origin']
     raw_cars_df = pd.read_csv("./cars.csv", usecols=column_names, na_values='?')
-    raw_cars_df
+    raw_cars_df.head()
     return column_names, raw_cars_df
 
 
@@ -221,154 +221,60 @@ def _(encoder):
 
 @app.cell(hide_code=True)
 def _(mo):
-    mo.md(r"""Here we make the encoded array into a DataFrame with the appropriate column names.""")
-    return
-
-
-@app.cell
-def _(origin_encoded_array, pd):
-    encoded_df = pd.DataFrame(origin_encoded_array, columns=['usa', 'japan', 'europe'])
-    encoded_df.tail()
-    return (encoded_df,)
-
-
-@app.cell(hide_code=True)
-def _(mo):
-    mo.md("""Here we drop the 'origin' column and and the new values to the DataFrame.""")
-    return
-
-
-@app.cell
-def _(cars_df_mapped, encoded_df, pd):
-    cars_df_copy = cars_df_mapped.drop(columns=['origin']).reset_index(drop=True)
-    cars_df_2 = pd.concat([cars_df_copy, encoded_df], axis=1)
-    cars_df_2.tail()
-    return cars_df_2, cars_df_copy
-
-
-@app.cell(hide_code=True)
-def _(mo):
-    mo.md(r"""Check correlation for the DataFrame.""")
-    return
-
-
-@app.cell
-def _(cars_df_2):
-    cars_df_2.corr()
-    return
-
-
-@app.cell(hide_code=True)
-def _(mo):
     mo.md(r"""Make the training and testing DataFrame.""")
     return
 
 
 @app.cell
-def _(cars_df_2):
-    cars_train_df = cars_df_2.sample(frac=0.8, random_state=0)
-    cars_test_df = cars_df_2.drop(cars_train_df.index)
-    cars_train_df, cars_test_df
-    return cars_test_df, cars_train_df
+def _(cars_df_1, origin_encoded_array):
+    import matplotlib.pyplot as plt
+    from sklearn.model_selection import train_test_split
+    from sklearn.preprocessing import MinMaxScaler
 
+    X = cars_df_1[['horsepower','cylinders','displacement']]
+    y = origin_encoded_array
 
-@app.cell(hide_code=True)
-def _(mo):
-    mo.md("""Make a Scatterplot to check for correlation in the training DataFrame.""")
-    return
+    min_max_scaler = MinMaxScaler()
 
-
-@app.cell
-def _(cars_train_df):
-    import seaborn as sns
-    sns.pairplot(cars_train_df[['mpg', 'cylinders', 'displacement', 'weight', 'horsepower']], diag_kind='kde')
-    return (sns,)
-
-
-@app.cell(hide_code=True)
-def _(mo):
-    mo.md(r"""Check for the value distribution in the DataFrame.""")
-    return
+    min_max_scaler.fit(X)
+    X = min_max_scaler.transform(X)
+    return MinMaxScaler, X, min_max_scaler, plt, train_test_split, y
 
 
 @app.cell
-def _(cars_train_df):
-    cars_train_df.describe().transpose()
-    return
-
-
-@app.cell(hide_code=True)
-def _(mo):
-    mo.md(r"""Make the features DataFrame, with the values we can test with, and the labels Series, with the values we want to predict for.""")
-    return
+def _(X, train_test_split, y):
+    X_train, X_test, y_train, y_test = train_test_split(X,y,test_size=0.2,random_state=42)
+    X_train[:5], y_train[:5]
+    return X_test, X_train, y_test, y_train
 
 
 @app.cell
-def _(cars_test_df, cars_train_df, pd):
-    cars_train_features = cars_train_df.copy()
-    cars_test_features = cars_test_df.copy()
-
-    cars_train_labels = pd.DataFrame(cars_train_features.pop('usa'))
-    cars_train_labels['japan'] = (cars_train_features.pop('japan'))
-    cars_train_labels['europe'] = (cars_train_features.pop('europe'))
-
-    cars_test_labels = pd.DataFrame(cars_test_features.pop('usa'))
-    cars_test_labels['japan'] = (cars_test_features.pop('japan'))
-    cars_test_labels['europe'] = (cars_test_features.pop('europe'))
-
-    cars_train_features, cars_test_features, cars_train_labels, cars_test_labels
-    return (
-        cars_test_features,
-        cars_test_labels,
-        cars_train_features,
-        cars_train_labels,
-    )
-
-
-@app.cell(hide_code=True)
-def _(mo):
-    mo.md(r"""Check to see the DataFrame Standard Deviation.""")
-    return
-
-
-@app.cell
-def _(cars_train_df):
-    cars_train_df.describe().transpose()[['mean', 'std']]
-    return
-
-
-@app.cell
-def _(cars_train_features, np):
+def _():
     import tensorflow as tf
-
-    hors_dis_cyl_array = np.array(cars_train_features[['horsepower','displacement','cylinders']])
-
-    hors_dis_cyl_array[:5]
-    return hors_dis_cyl_array, tf
-
-
-@app.cell
-def _(hors_dis_cyl_array, tf):
-    hors_dis_cyl_normalizer = tf.keras.layers.Normalization(axis=None)
-
-    hors_dis_cyl_normalizer.adapt(hors_dis_cyl_array)
-    return (hors_dis_cyl_normalizer,)
+    from tensorflow import keras
+    from tensorflow.keras import models
+    from tensorflow.keras import layers
+    from tensorflow.keras import optimizers
+    from tensorflow.keras import losses
+    from tensorflow.keras import metrics
+    from tensorflow.keras import activations
+    return activations, keras, layers, losses, metrics, models, optimizers, tf
 
 
 @app.cell
-def _(hors_dis_cyl_normalizer, tf):
+def _(activations, layers, losses, metrics, tf):
     model_1 = tf.keras.Sequential([
-        hors_dis_cyl_normalizer,
-        tf.keras.layers.Dense(8, activation='sigmoid'),
-        tf.keras.layers.Dense(3)
+        layers.Input(shape=(3,)),
+        layers.Dense(100, activation=activations.relu),
+        layers.Dense(3)
     ])
 
-    model_1_optimizer = tf.keras.optimizers.SGD(learning_rate=0.01)
+    model_1_optimizer = tf.keras.optimizers.Adam(learning_rate=0.001)
 
     model_1.compile(
         optimizer=model_1_optimizer, 
-        loss='binary_crossentropy',
-        metrics=[tf.keras.metrics.BinaryAccuracy()]
+        loss=losses.MeanAbsoluteError(),
+        metrics=[metrics.RootMeanSquaredError(),metrics.BinaryAccuracy()]
     )
 
     model_1.summary()
@@ -376,35 +282,19 @@ def _(hors_dis_cyl_normalizer, tf):
 
 
 @app.cell
-def _(cars_train_features, cars_train_labels, model_1):
+def _(X_train, model_1, y_train):
     from utils import Timer
 
     with Timer():
         model_1_history_1 = model_1.fit(
-            cars_train_features[['horsepower','displacement','cylinders']],
-            cars_train_labels,
-            epochs=100,
+            X_train,
+            y_train,
+            epochs=1000,
             verbose=0,
+            shuffle=True,
             validation_split=0.2
         )
     return Timer, model_1_history_1
-
-
-@app.cell
-def _(model_1_history_1):
-    import matplotlib.pyplot as plt
-
-    def plot_loss(hist):
-        plt.plot(hist.history['val_binary_accuracy'], label='val_binary_accuracy')
-        plt.plot(hist.history['binary_accuracy'], label='binary_accuracy')
-        plt.xlabel('Epoch')
-        plt.ylabel('Error [origin]')
-        plt.legend()
-        plt.grid(True)
-        plt.show()
-
-    plot_loss(model_1_history_1)
-    return plot_loss, plt
 
 
 @app.cell
@@ -421,29 +311,62 @@ def _(model_1_history_1, pd):
 
 
 @app.cell
-def _(cars_test_features, cars_test_labels, model_1):
+def _(History, model_1_history_1, plt):
+    def plot_loss(hist: History):
+        plt.plot(hist.history['loss'], label='loss')
+        plt.plot(hist.history['val_loss'], label='val_loss')
+        plt.xlabel('Epoch')
+        plt.ylabel('MAE [origin]')
+        plt.legend()
+        plt.grid(True)
+        plt.show()
+
+    def plot_rsme(hist: History):
+        plt.plot(hist.history['root_mean_squared_error'], label='root_mean_squared_error')
+        plt.plot(hist.history['val_root_mean_squared_error'], label='val_root_mean_squared_error')
+        plt.xlabel('Epoch')
+        plt.ylabel('RSME [origin]')
+        plt.legend()
+        plt.grid(True)
+        plt.show()
+
+    def plot_accuracy(hist: History):
+        plt.plot(hist.history['binary_accuracy'], label='binary_accuracy')
+        plt.plot(hist.history['val_binary_accuracy'], label='val_binary_accuracy')
+        plt.xlabel('Epoch')
+        plt.ylabel('ACC [origin]')
+        plt.legend()
+        plt.grid(True)
+        plt.show()
+
+    plot_loss(model_1_history_1), plot_rsme(model_1_history_1), plot_accuracy(model_1_history_1)
+    return plot_accuracy, plot_loss, plot_rsme
+
+
+@app.cell
+def _(X_test, model_1, y_test):
     test_results = {}
 
     test_results['model_1'] = model_1.evaluate(
-        cars_test_features[['horsepower','displacement','cylinders']],
-        cars_test_labels, verbose=0)
+        X_test,
+        y_test, verbose=0)
     return (test_results,)
 
 
 @app.cell
-def _(hors_dis_cyl_normalizer, tf):
+def _(activations, layers, losses, metrics, optimizers, tf):
     model_2 = tf.keras.Sequential([
-        hors_dis_cyl_normalizer,
-        tf.keras.layers.Dense(8, activation='sigmoid'),
-        tf.keras.layers.Dense(3)
+        layers.Input(shape=(3,)),
+        layers.Dense(100, activation=activations.sigmoid),
+        layers.Dense(3)
     ])
 
-    model_2_optimizer = tf.keras.optimizers.SGD(learning_rate=0.01)
+    model_2_optimizer = optimizers.Adam(learning_rate=0.001)
 
     model_2.compile(
         optimizer=model_2_optimizer, 
-        loss='binary_crossentropy', 
-        metrics=[tf.keras.metrics.BinaryAccuracy()]
+        loss=losses.MeanAbsoluteError(),
+        metrics=[metrics.RootMeanSquaredError(),metrics.BinaryAccuracy()]
     )
 
     model_2.summary()
@@ -451,22 +374,17 @@ def _(hors_dis_cyl_normalizer, tf):
 
 
 @app.cell
-def _(Timer, cars_train_features, cars_train_labels, model_2):
+def _(Timer, X_train, model_2, y_train):
     with Timer():
         model_2_history_1 = model_2.fit(
-            cars_train_features[['horsepower','displacement','cylinders']],
-            cars_train_labels,
-            epochs=300,
+            X_train,
+            y_train,
+            epochs=1000,
             verbose=0,
+            shuffle=True,
             validation_split=0.2
         )
     return (model_2_history_1,)
-
-
-@app.cell
-def _(model_2_history_1, plot_loss):
-    plot_loss(model_2_history_1)
-    return
 
 
 @app.cell
@@ -476,28 +394,52 @@ def _(model_2_history_1, show_history):
 
 
 @app.cell
-def _(cars_test_features, cars_test_labels, model_2, test_results):
-    test_results['model_2'] = model_2.evaluate(
-        cars_test_features[['horsepower','displacement','cylinders']],
-        cars_test_labels, verbose=0)
+def _(model_2_history_1, plot_accuracy, plot_loss, plot_rsme):
+    plot_loss(model_2_history_1), plot_rsme(model_2_history_1), plot_accuracy(model_2_history_1)
     return
 
 
 @app.cell
-def _(hors_dis_cyl_normalizer, tf):
+def _(X_test, model_2, test_results, y_test):
+    test_results['model_2'] = model_2.evaluate(
+        X_test,
+        y_test, verbose=0)
+    return
+
+
+@app.cell
+def _(MinMaxScaler, cars_df_1, origin_encoded_array):
+    X_2 = cars_df_1[['mpg','horsepower','cylinders','displacement','weight','acceleration','model year']]
+    y_2 = origin_encoded_array
+
+    min_max_scaler_2 = MinMaxScaler()
+
+    min_max_scaler_2.fit(X_2)
+    X_2 = min_max_scaler_2.transform(X_2)
+    return X_2, min_max_scaler_2, y_2
+
+
+@app.cell
+def _(X_2, train_test_split, y_2):
+    X_train_2, X_test_2, y_train_2, y_test_2 = train_test_split(X_2,y_2,test_size=0.2,random_state=42)
+    X_train_2[:5], y_train_2[:5]
+    return X_test_2, X_train_2, y_test_2, y_train_2
+
+
+@app.cell
+def _(activations, layers, losses, metrics, tf):
     model_3 = tf.keras.Sequential([
-        hors_dis_cyl_normalizer,
-        tf.keras.layers.Dense(64, activation='sigmoid'),
-        tf.keras.layers.Dense(64, activation='sigmoid'),
-        tf.keras.layers.Dense(3)
+        layers.Input(shape=(7,)),
+        layers.Dense(100, activation=activations.relu),
+        layers.Dense(3)
     ])
 
-    model_3_optimizer = tf.keras.optimizers.SGD(learning_rate=0.01)
+    model_3_optimizer = tf.keras.optimizers.Adam(learning_rate=0.001)
 
     model_3.compile(
         optimizer=model_3_optimizer, 
-        loss='binary_crossentropy', 
-        metrics=[tf.keras.metrics.BinaryAccuracy()]
+        loss=losses.MeanAbsoluteError(),
+        metrics=[metrics.RootMeanSquaredError(),metrics.BinaryAccuracy()]
     )
 
     model_3.summary()
@@ -505,153 +447,36 @@ def _(hors_dis_cyl_normalizer, tf):
 
 
 @app.cell
-def _(Timer, cars_train_features, cars_train_labels, model_3):
+def _(Timer, X_train_2, model_3, y_train_2):
     with Timer():
         model_3_history_1 = model_3.fit(
-            cars_train_features[['horsepower','displacement','cylinders']],
-            cars_train_labels,
-            epochs=100,
+            X_train_2,
+            y_train_2,
+            epochs=1000,
             verbose=0,
+            shuffle=True,
             validation_split=0.2
         )
     return (model_3_history_1,)
 
 
 @app.cell
-def _(model_3_history_1, plot_loss):
-    plot_loss(model_3_history_1)
-    return
-
-
-@app.cell
 def _(model_3_history_1, show_history):
     show_history(model_3_history_1)
     return
 
 
 @app.cell
-def _(cars_test_features, cars_test_labels, model_3, test_results):
+def _(model_3_history_1, plot_accuracy, plot_loss, plot_rsme):
+    plot_loss(model_3_history_1), plot_rsme(model_3_history_1), plot_accuracy(model_3_history_1)
+    return
+
+
+@app.cell
+def _(X_test_2, model_3, test_results, y_test_2):
     test_results['model_3'] = model_3.evaluate(
-        cars_test_features[['horsepower','displacement','cylinders']],
-        cars_test_labels, verbose=0)
-    return
-
-
-@app.cell
-def _(cars_train_features, np, tf):
-    more_features_array = np.array(cars_train_features)
-
-    more_features_normalizer = tf.keras.layers.Normalization(axis=-1)
-
-    more_features_normalizer.adapt(more_features_array)
-    return more_features_array, more_features_normalizer
-
-
-@app.cell
-def _(more_features_normalizer, tf):
-    model_4 = tf.keras.Sequential([
-        more_features_normalizer,
-        tf.keras.layers.Dense(64, activation='sigmoid'),
-        tf.keras.layers.Dense(64, activation='sigmoid'),
-        tf.keras.layers.Dense(3)
-    ])
-
-    model_4_optimizer = tf.keras.optimizers.SGD(learning_rate=0.01)
-
-    model_4.compile(
-        optimizer=model_4_optimizer, 
-        loss='binary_crossentropy', 
-        metrics=[tf.keras.metrics.BinaryAccuracy()]
-    )
-
-    model_4.summary()
-    return model_4, model_4_optimizer
-
-
-@app.cell
-def _(Timer, cars_train_features, cars_train_labels, model_4):
-    with Timer():
-        model_4_history_1 = model_4.fit(
-            cars_train_features,
-            cars_train_labels,
-            epochs=100,
-            verbose=0,
-            validation_split=0.2
-        )
-    return (model_4_history_1,)
-
-
-@app.cell
-def _(model_3_history_1, show_history):
-    show_history(model_3_history_1)
-    return
-
-
-@app.cell
-def _(model_4_history_1, plot_loss):
-    plot_loss(model_4_history_1)
-    return
-
-
-@app.cell
-def _(cars_test_features, cars_test_labels, model_4, test_results):
-    test_results['model_4'] = model_4.evaluate(
-        cars_test_features,
-        cars_test_labels, verbose=0)
-    return
-
-
-@app.cell
-def _(more_features_normalizer, tf):
-    model_5 = tf.keras.Sequential([
-        more_features_normalizer,
-        tf.keras.layers.Dense(128, activation='sigmoid'),
-        tf.keras.layers.Dense(128, activation='sigmoid'),
-        tf.keras.layers.Dense(3)
-    ])
-
-    model_5_optimizer = tf.keras.optimizers.SGD(learning_rate=0.01)
-
-    model_5.compile(
-        optimizer=model_5_optimizer, 
-        loss='binary_crossentropy', 
-        metrics=[tf.keras.metrics.BinaryAccuracy()]
-    )
-
-    model_5.summary()
-    return model_5, model_5_optimizer
-
-
-@app.cell
-def _(Timer, cars_train_features, cars_train_labels, model_5):
-    with Timer():
-        model_5_history_1 = model_5.fit(
-            cars_train_features,
-            cars_train_labels,
-            epochs=100,
-            verbose=0,
-            validation_split=0.2
-        )
-    return (model_5_history_1,)
-
-
-@app.cell
-def _(model_5_history_1, plot_loss):
-    plot_loss(model_5_history_1)
-    return
-
-
-@app.cell
-def _(model_5_history_1, show_history):
-    show_history(model_5_history_1)
-    return
-
-
-@app.cell
-def _(cars_test_features, cars_test_labels, model_5, test_results):
-    test_results['model_5'] = model_5.evaluate(
-        cars_test_features,
-        cars_test_labels, verbose=0)
+        X_test_2,
+        y_test_2, verbose=0)
     return
 
 
@@ -663,9 +488,8 @@ def _(test_results):
 
 @app.cell
 def _(pd, test_results):
-    result = pd.DataFrame(test_results).transpose()
-    result
-    return (result,)
+    pd.DataFrame(test_results, index=['MAE','RSME','ACC']).T
+    return
 
 
 if __name__ == "__main__":
