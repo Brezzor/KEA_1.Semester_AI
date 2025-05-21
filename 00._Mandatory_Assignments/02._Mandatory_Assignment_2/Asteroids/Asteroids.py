@@ -31,7 +31,13 @@ def gameLoop(startingState="Menu"):
     for _ in range(3):
         asteroids.append(Asteroid(random.randint(0, display_width), random.randint(0, display_height), "Large"))
 
+    SPAWN_DELAY = 2000
+    MAX_ASTEROIDS = 8
+    next_spawn = pygame.time.get_ticks() + SPAWN_DELAY
+
+    # Main GameLoop - 
     while gameState != "Exit":
+
         if gameState == "Menu":
             gameDisplay.fill(black)
             drawText("ASTEROIDS", white, display_width / 2, display_height / 2, 100)
@@ -68,6 +74,8 @@ def gameLoop(startingState="Menu"):
             a.updateAsteroid()
         for b in bullets:
             b.updateBullet()
+            if  b.life <= 0:
+                bullets.remove(b)
 
         # Bullet collisions
         for b in bullets[:]:
@@ -77,8 +85,26 @@ def gameLoop(startingState="Menu"):
                     asteroids.remove(a)
                     score += 10
                     break
+        
+        now = pygame.time.get_ticks()
+        if now >= next_spawn and len(asteroids) < MAX_ASTEROIDS:
+            x, y = random.choice([(0, random.randint(0, display_height)),
+                                  (display_width, random.randint(0, display_height)),
+                                  (random.randint(0, display_width), 0),
+                                  (random.randint(0, display_width), display_height)])
+            new_type = random.choices(["Large", "Normal", "Small"],
+                                    weights=[3,2,1])[0]
+            asteroids.append(Asteroid(x,y, new_type))
+            next_spawn = now + SPAWN_DELAY
 
         gameDisplay.fill(black)
+
+        for a in asteroids:          # <-- Tegn asteroider
+            a.drawAsteroid(gameDisplay)
+
+        for b in bullets:            # <-- Tegn bullets
+            b.drawBullet(gameDisplay)
+
         player.drawPlayer(gameDisplay)
         drawText(f"Score: {score}", white, 60, 20, 40, False)
         pygame.display.update()

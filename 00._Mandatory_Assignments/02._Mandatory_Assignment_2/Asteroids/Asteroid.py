@@ -1,6 +1,7 @@
-import random
-import math
+import random, math, pygame
 from Utils import display_width, display_height
+
+GREY = (200,200,200)
 
 class Asteroid:
     def __init__(self, x, y, t):
@@ -16,3 +17,6 @@ class Asteroid:
         self.y += self.speed * math.sin(self.dir)
         self.x %= display_width
         self.y %= display_height
+    
+    def drawAsteroid(self, surface):
+        pygame.draw.circle(surface, GREY, (int(self.x), int(self.y)), self.size)

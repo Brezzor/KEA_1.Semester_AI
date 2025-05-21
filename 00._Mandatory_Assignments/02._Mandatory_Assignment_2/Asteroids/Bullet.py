@@ -1,5 +1,8 @@
-import math
+import math, pygame
 from Utils import display_width, display_height, bullet_speed
+
+WHITE = (255,255,255)
+RADIUS = 3
 
 class Bullet:
     def __init__(self, x, y, direction):
@@ -14,3 +17,6 @@ class Bullet:
         self.x %= display_width
         self.y %= display_height
         self.life -= 1
+
+    def drawBullet(self, surface):
+        pygame.draw.circle(surface, WHITE, (int(self.x), int(self.y)), RADIUS)
